@@ -7,3 +7,5 @@
 # Internal working docs (not part of the published skill)
 memory-forensics/DESIGN.md
 memory-forensics/PLAN.md
+velociraptor-triage/DESIGN.md
+velociraptor-triage/PLAN.md
