@@ -3,7 +3,7 @@ param(
   [Parameter(Mandatory=$true)][string]$Velo,        # e.g. ".\velociraptor.exe"
   [Parameter(Mandatory=$true)][string]$Out,          # collection dir
   [Parameter(Mandatory=$true)][string[]]$Artifacts,  # items: "Name" or "Name:--args K=V"
-  [string]$Format = "json"
+  [string]$Format = "jsonl"  # jsonl: one JSON object per line; --format json emits concatenated per-source arrays that do not parse as a single document
 )
 # Note: on Windows PowerShell 5.1, `-Encoding utf8` writes a UTF-8 BOM; prefer pwsh (7+) for BOM-free
 # output. JSON parsers generally tolerate a leading BOM, so this is non-fatal either way.
@@ -11,7 +11,8 @@ $ErrorActionPreference = "Continue"
 New-Item -ItemType Directory -Force -Path $Out | Out-Null
 $log = Join-Path $Out "_collection_log.txt"
 $errLog = Join-Path $Out "_errors.txt"
-"=== Collection started $(Get-Date -Format o) ===" | Out-File -FilePath $log -Encoding utf8
+# Append (not truncate) so phase-by-phase runs into the same case folder accumulate one log.
+"=== Collection started $(Get-Date -Format o) ===" | Out-File -FilePath $log -Encoding utf8 -Append
 $veloParts = $Velo -split ' '
 $veloExe = $veloParts[0]
 $veloLead = @(); if ($veloParts.Length -gt 1) { $veloLead = $veloParts[1..($veloParts.Length-1)] }

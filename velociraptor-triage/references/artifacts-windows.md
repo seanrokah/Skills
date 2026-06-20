@@ -1,6 +1,8 @@
 # Windows artifact reference (Velociraptor)
 Columns: Artifact | What it finds | Tag. Tags: [core] always-run, [heavy] large/slow.
-Collect headless: `velociraptor --nobanner artifacts collect <name> --format json`.
+Collect headless: `velociraptor --nobanner artifacts collect <name> --format jsonl` (one JSON object
+per line; `--format json` emits concatenated per-source arrays that won't parse as one document).
+YARA `[heavy]` artifacts need rules as args and are gated on a lead — don't run them empty by default.
 
 ## Phase 1 — Host/context
 | Generic.Client.Info | Hostname, OS, arch, MACs, basic host facts | [core] |

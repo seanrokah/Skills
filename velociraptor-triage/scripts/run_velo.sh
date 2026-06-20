@@ -3,7 +3,7 @@
 # Note: a <velo invocation> whose path contains spaces is not supported (it is word-split);
 # move/symlink the binary to a space-free path instead.
 set -u
-VELO=""; OUT=""; FMT="json"
+VELO=""; OUT=""; FMT="jsonl"  # jsonl: one JSON object per line; --format json emits concatenated per-source arrays that do not parse as a single document
 while [ $# -gt 0 ]; do
   case "$1" in
     -v) VELO="$2"; shift 2;;
@@ -16,7 +16,8 @@ done
 if [ -z "$VELO" ] || [ -z "$OUT" ]; then echo "missing -v/-o" >&2; exit 2; fi
 mkdir -p "$OUT"
 LOG="$OUT/_collection_log.txt"
-echo "=== Collection started $(date -u +%FT%TZ) ===" > "$LOG"
+# Append (not truncate) so phase-by-phase runs into the same case folder accumulate one log.
+echo "=== Collection started $(date -u +%FT%TZ) ===" >> "$LOG"
 for item in "$@"; do
   name="${item%%:*}"; extra=""
   [ "$item" != "$name" ] && extra="${item#*:}"
