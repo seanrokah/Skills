@@ -32,7 +32,8 @@ Velociraptor runs on the live host, so OS = this machine. Detect platform (Windo
 use the matching reference `references/artifacts-<os>.md`. Record host OS/arch/hostname.
 
 ## Step 3 — Case folder
-Default `./velo_triage_<UTCstamp>/` with `collection/` and `report/`. All outputs UTF-8.
+Default `./velo_triage_<UTCstamp>/` with `collection/` (raw artifact JSON + `_collection_log.txt`),
+`report/`, and `iocs.csv`. All outputs UTF-8.
 
 ## Step 4 — Run the phased workflow
 Headless: `velociraptor --nobanner artifacts collect <Artifact> --format json` (per-artifact to
