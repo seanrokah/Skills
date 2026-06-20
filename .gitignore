@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+
+# Archives / build artifacts
+*.zip
+
+# Internal working docs (not part of the published skill)
+memory-forensics/DESIGN.md
+memory-forensics/PLAN.md
