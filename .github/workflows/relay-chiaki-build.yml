@@ -59,8 +59,8 @@ jobs:
           # Import the key that signs chiaki-ng tags so `git verify-tag` really runs.
           curl -fsSL https://github.com/streetpea.gpg | gpg --import || echo "::warning::could not import streetpea key"
 
-      - name: Build (simulator + device)
-        run: ./build-chiaki-xcframework.sh --device --verbose
+      - name: Build (tvOS + iOS, simulator + device)
+        run: ./build-chiaki-xcframework.sh --device --ios --verbose
 
       - name: Package
         if: success()

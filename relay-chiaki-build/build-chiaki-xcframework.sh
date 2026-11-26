@@ -42,6 +42,7 @@ PY_REQUIREMENTS="$DEPS_DIR/requirements-nanopb.txt"
 # Pins. Change versions only together with their hash or commit.
 # ----------------------------------------------------------------------------
 TVOS_MIN="18.0"
+IOS_MIN="18.0"
 
 CHIAKI_REPO="https://github.com/chiaki-ng/chiaki-ng.git"
 CHIAKI_TAG="v1.10.1"
@@ -103,6 +104,7 @@ MODULE_NAME="ChiakiKit"
 # Options
 # ----------------------------------------------------------------------------
 BUILD_DEVICE=0
+BUILD_IOS=0
 CLEAN=0
 CLEAN_ALL=0
 VERBOSE=0
@@ -119,6 +121,8 @@ libraries for tvOS (arm64, minimum tvOS ${TVOS_MIN}) and packages them as
 Options:
   --device      Also build the appletvos (real Apple TV) slice. By default
                 only the appletvsimulator arm64 slice is built.
+  --ios         Also build the iOS slices (iphonesimulator arm64, plus
+                iphoneos with --device), minimum iOS ${IOS_MIN}.
   --clean       Delete build/ and out/ first. Verified sources in src/ are
                 kept and checked again.
   --clean-all   Delete src/, build/ and out/ first, and download everything
@@ -143,6 +147,7 @@ parse_args() {
 	while [ $# -gt 0 ]; do
 		case "$1" in
 			--device) BUILD_DEVICE=1 ;;
+			--ios) BUILD_IOS=1 ;;
 			--clean) CLEAN=1 ;;
 			--clean-all) CLEAN=1; CLEAN_ALL=1 ;;
 			--jobs)
@@ -545,12 +550,28 @@ slice_setup() {
 			SLICE_OPENSSL_TARGET="tvossimulator-arm64-xcrun"
 			SLICE_CLANG_TARGET="arm64-apple-tvos${TVOS_MIN}-simulator"
 			SLICE_EXPECT_PLATFORM="TVOSSIMULATOR"
+			SLICE_MIN="$TVOS_MIN"; SLICE_CMAKE_SYSTEM="tvOS"
 			;;
 		appletvos)
 			SLICE_MIN_FLAG="-mtvos-version-min=$TVOS_MIN"
 			SLICE_OPENSSL_TARGET="tvos64-xcrun"
 			SLICE_CLANG_TARGET="arm64-apple-tvos${TVOS_MIN}"
 			SLICE_EXPECT_PLATFORM="TVOS"
+			SLICE_MIN="$TVOS_MIN"; SLICE_CMAKE_SYSTEM="tvOS"
+			;;
+		iphonesimulator)
+			SLICE_MIN_FLAG="-mios-simulator-version-min=$IOS_MIN"
+			SLICE_OPENSSL_TARGET="iossimulator-arm64-xcrun"
+			SLICE_CLANG_TARGET="arm64-apple-ios${IOS_MIN}-simulator"
+			SLICE_EXPECT_PLATFORM="IOSSIMULATOR"
+			SLICE_MIN="$IOS_MIN"; SLICE_CMAKE_SYSTEM="iOS"
+			;;
+		iphoneos)
+			SLICE_MIN_FLAG="-mios-version-min=$IOS_MIN"
+			SLICE_OPENSSL_TARGET="ios64-xcrun"
+			SLICE_CLANG_TARGET="arm64-apple-ios${IOS_MIN}"
+			SLICE_EXPECT_PLATFORM="IOS"
+			SLICE_MIN="$IOS_MIN"; SLICE_CMAKE_SYSTEM="iOS"
 			;;
 		*) die "unknown slice $SLICE" ;;
 	esac
@@ -576,11 +597,11 @@ slice_setup() {
 # and nothing from Homebrew or the host system is.
 cmake_platform_args() {
 	printf '%s\n' \
-		"-DCMAKE_SYSTEM_NAME=tvOS" \
+		"-DCMAKE_SYSTEM_NAME=$SLICE_CMAKE_SYSTEM" \
 		"-DCMAKE_SYSTEM_PROCESSOR=aarch64" \
 		"-DCMAKE_OSX_SYSROOT=$SLICE_SDK_PATH" \
 		"-DCMAKE_OSX_ARCHITECTURES=arm64" \
-		"-DCMAKE_OSX_DEPLOYMENT_TARGET=$TVOS_MIN" \
+		"-DCMAKE_OSX_DEPLOYMENT_TARGET=$SLICE_MIN" \
 		"-DCMAKE_C_COMPILER=$SLICE_CC" \
 		"-DCMAKE_CXX_COMPILER=$SLICE_CXX" \
 		"-DCMAKE_FIND_ROOT_PATH=$SLICE_PREFIX" \
@@ -632,7 +653,7 @@ warn_unused_cmake_vars() {
 
 # Key of the toolchain/SDK for the current slice. Part of every step key.
 slice_toolchain_key() {
-	key_of "$SLICE" "$TVOS_MIN" "$SLICE_SDK_PATH" "$(xcrun --sdk "$SLICE" --show-sdk-version 2>/dev/null || true)" \
+	key_of "$SLICE" "$SLICE_MIN" "$SLICE_SDK_PATH" "$(xcrun --sdk "$SLICE" --show-sdk-version 2>/dev/null || true)" \
 		"$("$SLICE_CC" --version 2>/dev/null | head -n1)" "$(cmake --version | head -n1)"
 }
 
@@ -988,14 +1009,16 @@ verify_slice_lib() {
 	case "$SLICE_EXPECT_PLATFORM" in
 		TVOS) want_num=3 ;;
 		TVOSSIMULATOR) want_num=8 ;;
+		IOS) want_num=2 ;;
+		IOSSIMULATOR) want_num=7 ;;
 	esac
 	local bad
-	bad="$(printf '%s\n' "$report" | awk -v want="$SLICE_EXPECT_PLATFORM" -v wnum="$want_num" -v min="$TVOS_MIN" '
+	bad="$(printf '%s\n' "$report" | awk -v want="$SLICE_EXPECT_PLATFORM" -v wnum="$want_num" -v min="$SLICE_MIN" '
 		function vcmp(a,b,  x,y,i){split(a,x,".");split(b,y,".");for(i=1;i<=3;i++){if((x[i]+0)<(y[i]+0))return -1;if((x[i]+0)>(y[i]+0))return 1}return 0}
 		NF>=3 && $2!="legacy" { if (($2!=want && $2!=wnum) || vcmp($3,min)>0) print }')"
-	[ -z "$bad" ] || die "objects in $lib target the wrong platform or a newer tvOS than $TVOS_MIN:
+	[ -z "$bad" ] || die "objects in $lib target the wrong platform or a newer OS than $SLICE_MIN:
 $bad"
-	ok "$(basename "$lib"): arm64, $SLICE_EXPECT_PLATFORM, minos <= $TVOS_MIN"
+	ok "$(basename "$lib"): arm64, $SLICE_EXPECT_PLATFORM, minos <= $SLICE_MIN"
 }
 
 # Compiles a small C file that imports the module and calls the main entry
@@ -1100,7 +1123,7 @@ create_xcframework() {
 write_manifest() {
 	{
 		echo "$MODULE_NAME.xcframework -- built $(date -u +%Y-%m-%dT%H:%M:%SZ) by build-chiaki-xcframework.sh"
-		echo "slices:          $PACKAGED_SLICES (arm64, minimum tvOS $TVOS_MIN)"
+		echo "slices:          $PACKAGED_SLICES (arm64, minimum tvOS $TVOS_MIN / iOS $IOS_MIN)"
 		echo "chiaki-ng:       $CHIAKI_TAG  commit $CHIAKI_COMMIT  patches: $CHIAKI_PATCHES"
 		local entry
 		for entry in $CHIAKI_SUBMODULES; do
@@ -1154,6 +1177,10 @@ main() {
 
 	SDKS_TO_BUILD="appletvsimulator"
 	[ "$BUILD_DEVICE" = 1 ] && SDKS_TO_BUILD="$SDKS_TO_BUILD appletvos"
+	if [ "$BUILD_IOS" = 1 ]; then
+		SDKS_TO_BUILD="$SDKS_TO_BUILD iphonesimulator"
+		[ "$BUILD_DEVICE" = 1 ] && SDKS_TO_BUILD="$SDKS_TO_BUILD iphoneos"
+	fi
 
 	if [ "$CLEAN" = 1 ]; then
 		step "Cleaning"
