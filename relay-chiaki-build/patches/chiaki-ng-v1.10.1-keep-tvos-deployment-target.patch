@@ -1,0 +1,12 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -55,7 +55,8 @@
+ 
+ set(CHIAKI_IS_SWITCH ${NSWITCH})
+ 
+-if(APPLE)
++# tvOS/iOS builds: keep the caller-supplied CMAKE_OSX_DEPLOYMENT_TARGET.
++if(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+ 	if(CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
+ 		set(CMAKE_OSX_DEPLOYMENT_TARGET 13.0 CACHE STRING "Minimum OS X deployment version" FORCE)
+ 	else()

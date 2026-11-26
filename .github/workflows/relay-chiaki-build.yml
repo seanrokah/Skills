@@ -1,0 +1,93 @@
+# Builds ChiakiKit.xcframework (libchiaki + deps for tvOS) for the Relay
+# Apple TV app. Runs only on the relay-chiaki-build branch, so main and the
+# skills content are never affected.
+name: Relay - ChiakiKit.xcframework
+
+on:
+  push:
+    branches: [relay-chiaki-build]
+    paths:
+      - "relay-chiaki-build/**"
+      - ".github/workflows/relay-chiaki-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: relay-chiaki-build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: relay-chiaki-build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Select newest Xcode with a tvOS SDK
+        run: |
+          set -euo pipefail
+          ls -d /Applications/Xcode*.app || true
+          best=""
+          for app in $(ls -d /Applications/Xcode*.app | sort -V); do
+            if ls "$app/Contents/Developer/Platforms/AppleTVOS.platform" >/dev/null 2>&1; then best="$app"; fi
+          done
+          [ -n "$best" ] || { echo "No Xcode with AppleTVOS.platform on this runner"; exit 1; }
+          sudo xcode-select -s "$best/Contents/Developer"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i -E "tvos|appletv" || true
+          sw_vers
+
+      - name: Tools
+        run: |
+          set -euo pipefail
+          missing=""
+          for t in cmake ninja pkgconf gpg; do command -v "$t" >/dev/null 2>&1 || missing="$missing $t"; done
+          if [ -n "$missing" ]; then
+            pkgs="$(echo "$missing" | sed 's/gpg/gnupg/')"
+            echo "Installing:$pkgs"
+            HOMEBREW_NO_AUTO_UPDATE=1 brew install $pkgs
+          fi
+          cmake --version | head -1; ninja --version; python3 -V
+          # Import the key that signs chiaki-ng tags so `git verify-tag` really runs.
+          curl -fsSL https://github.com/streetpea.gpg | gpg --import || echo "::warning::could not import streetpea key"
+
+      - name: Build (simulator + device)
+        run: ./build-chiaki-xcframework.sh --device --verbose
+
+      - name: Package
+        if: success()
+        run: |
+          set -euo pipefail
+          cd out
+          ditto -c -k --sequesterRsrc --keepParent ChiakiKit.xcframework ChiakiKit.xcframework.zip
+          shasum -a 256 ChiakiKit.xcframework.zip | tee ChiakiKit.xcframework.zip.sha256
+          ls -la
+
+      - name: Upload xcframework
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ChiakiKit-xcframework
+          path: |
+            relay-chiaki-build/out/ChiakiKit.xcframework.zip
+            relay-chiaki-build/out/ChiakiKit.xcframework.zip.sha256
+            relay-chiaki-build/out/ChiakiKit-versions.txt
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: build-logs
+          path: relay-chiaki-build/build/logs/
+          retention-days: 14
+          if-no-files-found: warn
