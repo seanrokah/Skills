@@ -1,0 +1,16 @@
+ChiakiKit.xcframework -- built 2026-11-26T22:44:06Z by build-chiaki-xcframework.sh
+slices:          appletvsimulator appletvos iphonesimulator iphoneos (arm64, minimum tvOS 18.0 / iOS 18.0)
+chiaki-ng:       v1.10.1  commit f30da0aaeb96fc0026cc03683153f682352e7d7c  patches: chiaki-ng-v1.10.1-keep-tvos-deployment-target.patch
+  submodule:     third-party/nanopb  commit 160d4f09e5fabb2b66aa2dea32d4f38ace2c4b3f
+  submodule:     third-party/jerasure  commit 505ccb4bc69eee8d7ea40a6089a056b99671134f
+  submodule:     third-party/gf-complete  commit fa54a4670a5705c84abf6c24b92b0cd479625478
+OpenSSL:         3.5.9  sha256 603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a
+  options:       no-shared no-tests no-apps no-docs no-engine no-legacy no-module no-async no-ui-console
+Opus:            1.6.1  sha256 6ffcb593207be92584df15b32466ed64bbec99109f007c82205f0194572411a1
+curl:            8.23.0  curl-8_23_0 commit 3163ec065643ba20709f190111f42c3e1fe95273 (OpenSSL + Apple SecTrust, HTTP/HTTPS/WS/WSS)
+libevent:        2.1.12-stable  commit 5df3037d10556bfcb675bc73e516978b75fc7bc7 (libevent_core)
+json-c:          0.18-20240915  commit 41a55cfcedb54d9c1874f2f0eb07b504091d7e37
+miniupnpc:       2.3.5  commit e1db7c47295d38b2b416c892779dae9afa434016
+nanopb python:   grpcio-tools==1.85.4 grpcio==1.85.4 protobuf==7.36.2 setuptools==84.2.1 typing-extensions==4.16.0 (hash-locked)
+Xcode:           Xcode 26.6 Build version 17F113 
+Link in the app: ChiakiKit.xcframework (Do Not Embed), Security.framework, CoreFoundation.framework
